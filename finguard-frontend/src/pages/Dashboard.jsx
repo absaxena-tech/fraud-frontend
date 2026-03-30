@@ -1,38 +1,193 @@
-import React, { useEffect, useState } from 'react';
-import StatCard from '../components/StatCard';
-import FraudAlerts from '../components/FraudAlerts';
-import AnalyticsChart from '../components/AnalyticsChart';
-import LiveFeed from '../components/LiveFeed';
-import { fraudAPI, transactionAPI, riskAPI } from '../api/api';
-import { CreditCard, AlertTriangle, Shield, TrendingUp, Activity, Brain } from 'lucide-react';
+import React, { useEffect, useState, useRef, useCallback, useContext } from "react";
+import StatCard from "../components/StatCard";
+import FraudAlerts from "../components/FraudAlerts";
+import AnalyticsChart from "../components/AnalyticsChart";
+import LiveKafkaFeed from "../components/LiveKafkaFeed";
+
+import { fraudAPI, transactionAPI, riskAPI } from "../api/api";
+import { AlertTriangle, Shield, TrendingUp, Activity, Brain } from "lucide-react";
+import { ThemeContext } from "../App";
+
+// Use API Gateway (port 8080) with authentication
+const API_GATEWAY_URL = "http://localhost:8080";
+const LIVE_FEED_HISTORY_URL = `${API_GATEWAY_URL}/api/live-feed/history`;
+const LIVE_FEED_SSE_URL = `${API_GATEWAY_URL}/api/live-feed/stream`;
+
+const MAX_FEED_ITEMS = 50;
+const SSE_RECONNECT_DELAY = 5000;
+
+// Helper to get auth token from localStorage
+const getAuthToken = () => {
+  return localStorage.getItem('accessToken');
+};
 
 export default function Dashboard() {
+  const { darkMode } = useContext(ThemeContext);
   const [alerts, setAlerts] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [riskProfile, setRiskProfile] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [liveFeed, setLiveFeed] = useState([]);
 
+  const [liveFeed, setLiveFeed] = useState([]);
+  const [sseStatus, setSseStatus] = useState("connecting");
+
+  const eventSourceRef = useRef(null);
+  const reconnectTimerRef = useRef(null);
+
+  // ── Prepend new event into feed ──
+  const prependEvent = useCallback((event) => {
+    setLiveFeed((prev) => {
+      const exists = prev.some(e => {
+        if (event.messageId && e.messageId) {
+          return e.messageId === event.messageId;
+        }
+        return e.topic === event.topic && 
+               e.partition === event.partition && 
+               e.offset === event.offset;
+      });
+      
+      if (exists) {
+        console.log("Duplicate event ignored:", event.messageId || `${event.topic}-${event.partition}-${event.offset}`);
+        return prev;
+      }
+      
+      const eventWithId = {
+        ...event,
+        eventId: event.messageId || `${event.topic}-${event.partition}-${event.offset}-${Date.now()}`
+      };
+      return [eventWithId, ...prev].slice(0, MAX_FEED_ITEMS);
+    });
+  }, []);
+
+  // ── SSE Connect Function with Authentication ──
+  const connectSSE = useCallback(() => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    setSseStatus("connecting");
+
+    const token = getAuthToken();
+    if (!token) {
+      console.warn("No auth token available for SSE connection");
+      setSseStatus("error");
+      return;
+    }
+
+    const sseUrl = `${LIVE_FEED_SSE_URL}?token=${token}`;
+    const es = new EventSource(sseUrl);
+    eventSourceRef.current = es;
+
+    es.addEventListener("ping", (e) => {
+      console.log("💓 SSE ping:", e.data);
+      setSseStatus("live");
+    });
+
+    es.addEventListener("kafka-message", (e) => {
+      try {
+        const data = JSON.parse(e.data);
+        console.log("📨 Kafka message received:", data);
+        prependEvent(data);
+      } catch (err) {
+        console.warn("Failed to parse SSE event:", err);
+      }
+    });
+
+    es.onopen = () => {
+      console.log("✅ SSE connection opened");
+      setSseStatus("live");
+
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+
+    es.onerror = (err) => {
+      console.error("❌ SSE error:", err);
+      setSseStatus("error");
+
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+
+      reconnectTimerRef.current = setTimeout(() => {
+        console.log("🔄 Reconnecting SSE...");
+        connectSSE();
+      }, SSE_RECONNECT_DELAY);
+    };
+  }, [prependEvent]);
+
+  // ── Load history with authentication ──
+  useEffect(() => {
+    let mounted = true;
+
+    const loadHistory = async () => {
+      try {
+        const token = getAuthToken();
+        if (!token) {
+          console.warn("No auth token available for history");
+          return;
+        }
+
+        const res = await fetch(LIVE_FEED_HISTORY_URL, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (res.status === 401) {
+          console.error("Authentication failed - please login again");
+          return;
+        }
+        
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        if (mounted && data && Array.isArray(data)) {
+          const eventsWithId = data.map(event => ({
+            ...event,
+            eventId: event.messageId || `${event.topic}-${event.partition}-${event.offset}-${Date.now()}`
+          }));
+          setLiveFeed(eventsWithId.slice(0, MAX_FEED_ITEMS));
+          console.log(`Loaded ${eventsWithId.length} historical Kafka messages`);
+        }
+      } catch (err) {
+        console.warn("Could not load live feed history:", err);
+      }
+    };
+
+    loadHistory();
+    connectSSE();
+
+    return () => {
+      mounted = false;
+
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+
+      if (reconnectTimerRef.current) {
+        clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
+      }
+    };
+  }, [connectSSE]);
+
+  // ── Load main dashboard data ──
   useEffect(() => {
     fetchAllData();
-    
-    const interval = setInterval(() => {
-      addLiveMessage();
-    }, 30000);
-    
-    return () => clearInterval(interval);
   }, []);
 
   async function fetchAllData() {
     try {
       setLoading(true);
-      await Promise.all([
-        fetchAlerts(),
-        fetchTransactions(),
-        fetchRiskProfile(),
-      ]);
+      await Promise.all([fetchAlerts(), fetchTransactions(), fetchRiskProfile()]);
     } catch (err) {
-      console.error('Failed to fetch data', err);
+      console.error("Failed to fetch dashboard data", err);
     } finally {
       setLoading(false);
     }
@@ -43,7 +198,7 @@ export default function Dashboard() {
       const res = await fraudAPI.getMyAlerts();
       setAlerts(res.data || []);
     } catch (err) {
-      console.error('Failed to fetch alerts', err);
+      console.error("Failed to fetch alerts", err);
     }
   }
 
@@ -52,7 +207,7 @@ export default function Dashboard() {
       const res = await transactionAPI.getMyTransactions();
       setTransactions(res.data || []);
     } catch (err) {
-      console.error('Failed to fetch transactions', err);
+      console.error("Failed to fetch transactions", err);
     }
   }
 
@@ -61,55 +216,40 @@ export default function Dashboard() {
       const res = await riskAPI.getMyRisk();
       setRiskProfile(res.data);
     } catch (err) {
-      console.error('Failed to fetch risk profile', err);
+      console.error("Failed to fetch risk profile", err);
     }
   }
 
-  function addLiveMessage() {
-    const messages = [
-      'New transaction processed through Kafka',
-      'Fraud detection engine analyzed 50+ transactions',
-      'RAG service retrieved similar fraud patterns',
-      'Risk profiles updated for active accounts',
-      'Rule engine evaluated new transaction patterns',
-      'AI explanation generated for suspicious activity',
-    ];
-    
-    const newMessage = {
-      message: messages[Math.floor(Math.random() * messages.length)],
-      txn: `System • ${new Date().toLocaleTimeString()}`,
-      time: 'just now',
-    };
-    
-    setLiveFeed(prev => [newMessage, ...prev.slice(0, 9)]);
-  }
+  // Calculate statistics from real transactions
+  const approvedCount = transactions.filter(tx => tx.status === "APPROVED").length;
+  const flaggedCount = transactions.filter(tx => tx.status === "FLAGGED").length;
+  const blockedCount = transactions.filter(tx => tx.status === "BLOCKED").length;
+  
+  // Calculate average fraud score from alerts
+  const avgScore = alerts.length > 0
+    ? Math.round((alerts.reduce((sum, a) => sum + (a.fraudScore || 0), 0) / alerts.length) * 100)
+    : 0;
 
-  const blockedCount = alerts.filter((a) => a.status === "BLOCKED").length;
-  const flaggedCount = alerts.filter((a) => a.status === "FLAGGED").length;
-
-  const avgScore =
-    alerts.length > 0
-      ? Math.round(
-          (alerts.reduce((sum, a) => sum + (a.fraudScore || 0), 0) / alerts.length) * 100
-        )
-      : 0;
-
-  const chartData = transactions.slice(0, 7).map((tx, index) => ({
-    day: `Day ${index + 1}`,
-    safe: tx.status === 'PENDING' ? 1 : 0,
-    flagged: tx.status === 'FLAGGED' ? 1 : 0,
-    blocked: tx.status === 'BLOCKED' ? 1 : 0,
-    avgScore: (tx.amount / 1000) * (riskProfile?.riskScore || 0.5),
-  }));
+  // Prepare chart data for the last 7 days
+  const chartData = transactions
+    .slice(0, 7)
+    .map((tx, index) => ({
+      day: new Date(tx.timestamp).toLocaleDateString('en-US', { weekday: 'short' }),
+      approved: tx.status === "APPROVED" ? 1 : 0,
+      flagged: tx.status === "FLAGGED" ? 1 : 0,
+      blocked: tx.status === "BLOCKED" ? 1 : 0,
+      avgScore: (tx.amount / 1000) * (riskProfile?.riskScore || 0.5),
+    }))
+    .reverse(); // Show oldest to newest
 
   return (
-    <div className="page">
+    <div className="dashboard-page">
       <div className="page-header">
         <div>
           <h1>Dashboard Overview</h1>
           <p>
             Real-time fraud detection powered by RAG pipeline •{" "}
-            {loading ? "Loading..." : "Live updates active"}
+            {loading ? "Loading..." : sseStatus === "live" ? "Live updates active" : "Reconnecting..."}
           </p>
         </div>
 
@@ -117,25 +257,29 @@ export default function Dashboard() {
           <button className="btn" onClick={fetchAllData} disabled={loading}>
             {loading ? "Refreshing..." : "⟳ Refresh"}
           </button>
-          <span className="badge success">● Pipeline Active</span>
+          <span className={`badge ${sseStatus === "live" ? "success" : "warning"}`}>
+            {sseStatus === "live" ? "● Pipeline Active" : sseStatus === "connecting" ? "● Connecting..." : "● Reconnecting..."}
+          </span>
         </div>
       </div>
 
       <div className="stats-grid">
         <StatCard
-          title="TOTAL TRANSACTIONS"
-          value={transactions.length}
-          subtitle="Processed"
-          change="Live"
+          title="APPROVED"
+          value={approvedCount}
+          subtitle="Successful transactions"
+          change="+12%"
+          trend="up"
           icon={<Activity size={18} />}
-          color="blue"
+          color="green"
         />
 
         <StatCard
           title="FLAGGED"
           value={flaggedCount}
           subtitle="Needs review"
-          change="Live"
+          change={`${flaggedCount > 0 ? '+' : ''}${flaggedCount}`}
+          trend={flaggedCount > 0 ? "up" : "down"}
           icon={<AlertTriangle size={18} />}
           color="yellow"
         />
@@ -144,7 +288,8 @@ export default function Dashboard() {
           title="BLOCKED"
           value={blockedCount}
           subtitle="Auto-blocked"
-          change="Live"
+          change={`${blockedCount > 0 ? '+' : ''}${blockedCount}`}
+          trend={blockedCount > 0 ? "up" : "down"}
           icon={<Shield size={18} />}
           color="red"
         />
@@ -152,27 +297,32 @@ export default function Dashboard() {
         <StatCard
           title="AVG FRAUD SCORE"
           value={`${avgScore}%`}
-          subtitle="Based on alerts"
-          change="Live"
+          subtitle="Risk assessment"
+          change={avgScore > 50 ? "High risk" : "Low risk"}
+          trend={avgScore > 50 ? "up" : "down"}
           icon={<TrendingUp size={18} />}
           color="purple"
         />
 
         <StatCard
           title="RISK SCORE"
-          value={riskProfile ? `${Math.round(riskProfile.riskScore * 100)}%` : 'N/A'}
-          subtitle={riskProfile?.riskLevel || 'Loading...'}
-          change="Live"
+          value={riskProfile ? `${Math.round(riskProfile.riskScore * 100)}%` : "N/A"}
+          subtitle={riskProfile?.riskLevel || "Loading..."}
+          change="Based on behavior"
           icon={<Brain size={18} />}
           color="orange"
         />
       </div>
 
-      <AnalyticsChart data={chartData} />
+      {/* Pass both chart data and actual transactions to AnalyticsChart */}
+      <AnalyticsChart 
+        data={chartData} 
+        transactions={transactions}
+      />
 
       <div className="bottom-grid">
         <FraudAlerts alerts={alerts} />
-        <LiveFeed feed={liveFeed} />
+        <LiveKafkaFeed messages={liveFeed} status={sseStatus} />
       </div>
     </div>
   );

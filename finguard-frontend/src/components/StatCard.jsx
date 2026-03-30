@@ -15,9 +15,9 @@ export default function StatCard({ title, value, subtitle, change, icon, color }
         </div>
       </div>
 
-      <div className={`stat-change ${change.startsWith("+") ? "positive" : "negative"}`}>
+      {/* <div className={`stat-change ${change.startsWith("+") ? "positive" : "negative"}`}>
         {change} vs yesterday
-      </div>
+      </div> */}
     </div>
   );
 }

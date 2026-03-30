@@ -1,8 +1,8 @@
 import React from 'react';
-import { LayoutDashboard, List, Bell, BarChart2, Moon, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, List, Bell, BarChart2, Moon, Sun, Settings, LogOut } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
-export default function Sidebar() {
+export default function Sidebar({ toggleDarkMode, darkMode }) {
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -51,6 +51,10 @@ export default function Sidebar() {
       </div>
 
       <div className="sidebar-footer">
+        <button className="footer-btn theme-toggle" onClick={toggleDarkMode}>
+          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+          {darkMode ? "Light Mode" : "Dark Mode"}
+        </button>
         <button className="footer-btn" onClick={handleLogout}>
           <LogOut size={18} /> Logout
         </button>

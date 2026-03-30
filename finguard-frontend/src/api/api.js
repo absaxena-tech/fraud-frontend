@@ -33,6 +33,11 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
     
+    // Don't retry refresh endpoint
+    if (originalRequest.url?.includes('/api/auth/refresh')) {
+      return Promise.reject(error);
+    }
+    
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       
@@ -56,6 +61,7 @@ api.interceptors.response.use(
         localStorage.removeItem('refreshToken');
         localStorage.removeItem('user');
         window.location.href = '/login';
+        return Promise.reject(refreshError);
       }
     }
     
@@ -101,9 +107,16 @@ export const riskAPI = {
   updateProfile: (amount) => api.post(`/api/risk/me/update?amount=${amount}`),
 };
 
-// RAG API
+// RAG API - Updated to send the correct request format
 export const ragAPI = {
-  explain: (transaction) => api.post('/api/rag/explain', transaction),
+  // Now expects an object with transaction and ruleExplanation
+  explain: (transactionData, ruleExplanation) => {
+    const requestData = {
+      transaction: transactionData,
+      ruleExplanation: ruleExplanation || 'Transaction flagged for suspicious activity'
+    };
+    return api.post('/api/rag/explain', requestData);
+  },
   ingest: (caseDescription) => api.post('/api/rag/ingest', caseDescription),
   seed: () => api.post('/api/rag/seed'),
 };
