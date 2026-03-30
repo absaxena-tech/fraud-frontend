@@ -249,17 +249,32 @@ export default function Transactions() {
     }));
   }, [getDeviceId, detectIpAddress, detectLocation, detectGpsLocation]);
 
-  async function fetchTransactions() {
+  async function fetchTransactions(silent = false) {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await transactionAPI.getMyTransactions();
       setTransactions(res.data || []);
     } catch (err) {
       console.error('Failed to fetch transactions', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
+
+  useEffect(() => {
+    let timeoutId;
+    const hasPending = transactions.some(tx => tx.status === 'PENDING');
+    
+    if (hasPending) {
+      timeoutId = setTimeout(() => {
+        fetchTransactions(true); // silent fetch
+      }, 3000);
+    }
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [transactions]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -308,6 +323,8 @@ export default function Transactions() {
     switch(status) {
       case 'BLOCKED': return 'badge-danger';
       case 'FLAGGED': return 'badge-warning';
+      case 'PENDING': return 'badge-pending';
+      case 'SUCCESS': return 'badge-success';
       default: return 'badge-success';
     }
   };
@@ -485,7 +502,8 @@ export default function Transactions() {
                     <td>{tx.merchantCategory || '-'}</td>
                     <td>{tx.location || '-'}</td>
                     <td>
-                      <span className={`status-badge ${getStatusBadgeClass(tx.status)}`}>
+                      <span className={`status-badge ${getStatusBadgeClass(tx.status)}`} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        {tx.status === 'PENDING' && <span className="badge-spinner"></span>}
                         {tx.status}
                       </span>
                     </td>

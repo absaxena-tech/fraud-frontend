@@ -822,6 +822,25 @@ body.dark-mode .login-card {
   color: var(--danger);
 }
 
+.badge-pending {
+  background: rgba(148, 163, 184, 0.15);
+  color: var(--text-secondary);
+}
+
+.badge-spinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid rgba(148, 163, 184, 0.3);
+  border-radius: 50%;
+  border-top-color: var(--text-secondary);
+  animation: badge-spin 0.8s linear infinite;
+}
+
+@keyframes badge-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Score Cell */
 .score-cell {
   display: flex;
@@ -1155,13 +1174,13 @@ body.dark-mode .login-card {
 
 /* Button Icon */
 .btn-secondary::before {
-  content: '📍';
+  content: 'ðŸ“';
   font-size: 14px;
 }
 
 /* Different icon for refresh button */
 .btn-secondary.refresh::before {
-  content: '🔄';
+  content: 'ðŸ”„';
 }
 
 /* Hover Effects */

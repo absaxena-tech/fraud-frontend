@@ -184,7 +184,7 @@ function KafkaCard({ message, isNew }) {
         borderLeftColor: colors.bar,
       }}
     >
-      {isNew && <div className="live-indicator">● NEW</div>}
+      {/* {isNew && <div className="live-indicator">● NEW</div>} */}
       
       <div className="kafka-card-header">
         <div className="kafka-card-left">
