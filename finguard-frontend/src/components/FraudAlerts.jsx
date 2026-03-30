@@ -18,7 +18,7 @@ export default function FraudAlerts({ alerts }) {
     <div className="alerts-box">
       <div className="alerts-header">
         <h3>Recent Fraud Alerts</h3>
-        <span className="badge danger">{alerts.filter(a => a.status === "BLOCKED").length} blocked</span>
+        {/* <span className="badge danger">{alerts.filter(a => a.status === "BLOCKED").length} blocked</span> */}
 
         <div className="filters">
           <button 

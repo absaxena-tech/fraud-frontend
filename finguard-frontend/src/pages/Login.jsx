@@ -1,3 +1,4 @@
+// Login.jsx
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authAPI } from '../api/api';
@@ -40,49 +41,92 @@ export default function Login() {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-card">
-        <div className="login-header">
-          <div className="logo-large">🛡️</div>
-          <h1>FinGuard</h1>
-          <p>Fraud Detection System</p>
+    <div className="auth-page">
+      <div className="auth-grid">
+        {/* Left Panel - Brand/Info */}
+        <div className="auth-info-panel">
+          <div className="info-content">
+            <div className="brand-icon">🛡️</div>
+            <h1>FinGuard</h1>
+            <p className="tagline">Advanced Fraud Detection System</p>
+            <div className="security-badges">
+              <span>🔒 Bank-Grade Security</span>
+              <span>⚡ Real-time Monitoring</span>
+              <span>🤖 AI-Powered Analysis</span>
+            </div>
+            <div className="stats">
+              <div className="stat">
+                <span className="stat-number">99.9%</span>
+                <span className="stat-label">Detection Rate</span>
+              </div>
+              <div className="stat">
+                <span className="stat-number">&lt;1s</span>
+                <span className="stat-label">Response Time</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {error && <div className="error-message">{error}</div>}
+        {/* Right Panel - Form */}
+        <div className="auth-form-panel">
+          <div className="form-container">
+            <div className="form-header">
+              <h2>Welcome Back</h2>
+              <p>Sign in to your account</p>
+            </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              placeholder="Enter your email"
-            />
+            {error && <div className="error-message">{error}</div>}
+
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label>Email Address</label>
+                <div className="input-icon">
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    required
+                    placeholder="admin@finguard.com"
+                  />
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Password</label>
+                <div className="input-icon">
+                  <input
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    placeholder="Enter your password"
+                  />
+                </div>
+              </div>
+
+              <div className="form-options">
+                <label className="checkbox-label">
+                  <input type="checkbox" /> Remember me
+                </label>
+                <a href="/forgot-password" className="forgot-link">Forgot Password?</a>
+              </div>
+
+              <button type="submit" className="btn-primary" disabled={loading}>
+                {loading ? 'Authenticating...' : 'Sign In'}
+              </button>
+            </form>
+
+            <p className="auth-switch">
+              Don't have an account? <a href="/register">Create Account</a>
+            </p>
+
+            <div className="divider">or</div>
+
+           
           </div>
-
-          <div className="form-group">
-            <label>Password</label>
-            <input
-              type="password"
-              name="password"
-              value={formData.password}
-              onChange={handleChange}
-              required
-              placeholder="Enter your password"
-            />
-          </div>
-
-          <button type="submit" className="btn-login" disabled={loading}>
-            {loading ? 'Logging in...' : 'Login'}
-          </button>
-        </form>
-
-        <p className="register-link">
-          Don't have an account? <a href="/register">Register here</a>
-        </p>
+        </div>
       </div>
     </div>
   );

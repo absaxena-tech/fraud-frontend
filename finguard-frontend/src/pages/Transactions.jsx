@@ -24,8 +24,41 @@ export default function Transactions() {
 
   const IP_SERVICES = [
     { url: 'https://api.ipify.org?format=json', parser: (data) => data.ip },
-    { url: 'https://ipapi.co/json/', parser: (data) => data.ip },
     { url: 'https://api.ip.sb/ip', parser: (data) => data.trim() },
+    { url: 'https://api.my-ip.io/ip.json', parser: (data) => data.ip },
+  ];
+
+  const LOCATION_SERVICES = [
+    {
+      url: 'https://ipapi.co/json/',
+      parser: (data) => ({
+        location: `${data.city}, ${data.country_name}`,
+        city: data.city,
+        country: data.country_name,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      })
+    },
+    {
+      url: 'https://ip-api.com/json/',
+      parser: (data) => ({
+        location: `${data.city}, ${data.country}`,
+        city: data.city,
+        country: data.country,
+        latitude: data.lat,
+        longitude: data.lon,
+      })
+    },
+    {
+      url: 'https://geolocation-db.com/json/',
+      parser: (data) => ({
+        location: `${data.city}, ${data.country_name}`,
+        city: data.city,
+        country: data.country_name,
+        latitude: data.latitude,
+        longitude: data.longitude,
+      })
+    }
   ];
 
   const getDeviceId = useCallback(() => {
@@ -68,8 +101,11 @@ export default function Transactions() {
     for (const service of IP_SERVICES) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
-        const response = await fetch(service.url, { signal: controller.signal });
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(service.url, { 
+          signal: controller.signal,
+          mode: 'cors'
+        });
         clearTimeout(timeoutId);
         
         if (!response.ok) throw new Error();
@@ -83,6 +119,7 @@ export default function Transactions() {
           return ip;
         }
       } catch (error) {
+        console.warn(`IP detection failed for ${service.url}:`, error);
         continue;
       }
     }
@@ -108,57 +145,81 @@ export default function Transactions() {
       } catch (e) {}
     }
     
-    // Try GPS first
-    if (navigator.geolocation && !forceRefresh) {
+    // Try multiple location services
+    for (const service of LOCATION_SERVICES) {
       try {
-        const position = await new Promise((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(service.url, { 
+          signal: controller.signal,
+          mode: 'cors'
         });
+        clearTimeout(timeoutId);
         
-        const response = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}`,
-          { headers: { 'User-Agent': 'TransactionApp/1.0' } }
-        );
+        if (!response.ok) throw new Error();
         
-        if (response.ok) {
-          const data = await response.json();
-          const locationData = {
-            location: `${data.address?.city || data.address?.town || ''}, ${data.address?.country || ''}`,
-            city: data.address?.city || '',
-            country: data.address?.country || '',
-          };
-          
-          if (locationData.location) {
-            setLocationDetails(locationData);
-            setLocationDetectionStatus('success');
-            sessionStorage.setItem('location_data', JSON.stringify(locationData));
-            return locationData;
-          }
-        }
-      } catch (error) {}
-    }
-    
-    // Fallback to IP-based location
-    try {
-      const response = await fetch('https://ipapi.co/json/', { timeout: 5000 });
-      if (response.ok) {
         const data = await response.json();
-        const locationData = {
-          location: `${data.city}, ${data.country_name}`,
-          city: data.city,
-          country: data.country_name,
-        };
+        const locationData = service.parser(data);
         
-        if (locationData.city) {
+        if (locationData.city && locationData.city !== 'null' && locationData.city !== 'undefined') {
           setLocationDetails(locationData);
           setLocationDetectionStatus('success');
           sessionStorage.setItem('location_data', JSON.stringify(locationData));
           return locationData;
         }
+      } catch (error) {
+        console.warn(`Location detection failed for ${service.url}:`, error);
+        continue;
       }
-    } catch (error) {}
+    }
     
     setLocationDetectionStatus('error');
+    return null;
+  }, []);
+
+  // GPS-based location detection (optional, requires permission)
+  const detectGpsLocation = useCallback(async () => {
+    if (!navigator.geolocation) {
+      return null;
+    }
+
+    try {
+      const position = await new Promise((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, { 
+          timeout: 10000,
+          maximumAge: 60000,
+          enableHighAccuracy: true
+        });
+      });
+      
+      // Use reverse geocoding with OpenStreetMap
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.coords.latitude}&lon=${position.coords.longitude}&zoom=10&addressdetails=1`,
+        { 
+          headers: { 'User-Agent': 'FinGuard-Fraud-Detection/1.0' },
+          timeout: 5000
+        }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        const city = data.address?.city || data.address?.town || data.address?.village || '';
+        const country = data.address?.country || '';
+        
+        if (city && country) {
+          return {
+            location: `${city}, ${country}`,
+            city: city,
+            country: country,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          };
+        }
+      }
+    } catch (error) {
+      console.warn('GPS location detection failed:', error);
+    }
+    
     return null;
   }, []);
 
@@ -173,7 +234,12 @@ export default function Transactions() {
   const initializeTransactionContext = useCallback(async () => {
     const deviceId = getDeviceId();
     const ipAddress = await detectIpAddress();
-    const locationData = await detectLocation();
+    
+    // Try GPS first, then fallback to IP-based location
+    let locationData = await detectGpsLocation();
+    if (!locationData) {
+      locationData = await detectLocation();
+    }
     
     setNewTransaction(prev => ({
       ...prev,
@@ -181,7 +247,7 @@ export default function Transactions() {
       ipAddress,
       location: locationData?.location || prev.location,
     }));
-  }, [getDeviceId, detectIpAddress, detectLocation]);
+  }, [getDeviceId, detectIpAddress, detectLocation, detectGpsLocation]);
 
   async function fetchTransactions() {
     try {
@@ -252,9 +318,22 @@ export default function Transactions() {
   };
 
   const handleRefreshLocation = async () => {
-    const locationData = await detectLocation(true);
+    setLocationDetectionStatus('detecting');
+    
+    // Try GPS first
+    let locationData = await detectGpsLocation();
+    
+    // Fallback to IP-based location
+    if (!locationData) {
+      locationData = await detectLocation(true);
+    }
+    
     if (locationData) {
       setNewTransaction(prev => ({ ...prev, location: locationData.location }));
+      setLocationDetails(locationData);
+      setLocationDetectionStatus('success');
+    } else {
+      setLocationDetectionStatus('error');
     }
   };
 
@@ -326,12 +405,20 @@ export default function Transactions() {
                 onChange={handleChange}
                 placeholder="Auto-detected or manually enter"
               />
-              <button type="button" onClick={handleRefreshLocation} className="btn-secondary" disabled={locationDetectionStatus === 'detecting'}>
+              <button 
+                type="button" 
+                onClick={handleRefreshLocation} 
+                className="btn-secondary" 
+                disabled={locationDetectionStatus === 'detecting'}
+              >
                 {locationDetectionStatus === 'detecting' ? 'Detecting...' : 'Detect'}
               </button>
             </div>
             {locationDetectionStatus === 'error' && (
-              <small className="error-text">Unable to detect location</small>
+              <small className="error-text">Unable to detect location. Please enter manually.</small>
+            )}
+            {locationDetectionStatus === 'success' && newTransaction.location && (
+              <small className="success-text">✓ Location detected successfully</small>
             )}
           </div>
 
@@ -344,13 +431,22 @@ export default function Transactions() {
                 value={newTransaction.ipAddress}
                 onChange={handleChange}
                 placeholder="Auto-detected IP"
+                readOnly
               />
-              <button type="button" onClick={handleRefreshIp} className="btn-secondary" disabled={ipRefreshCooldown > 0}>
-                {ipRefreshCooldown > 0 ? `Wait ${ipRefreshCooldown}s` : 'Refresh'}
+              <button 
+                type="button" 
+                onClick={handleRefreshIp} 
+                className="btn-secondary" 
+                disabled={ipRefreshCooldown > 0}
+              >
+                {ipRefreshCooldown > 0 ? `⏱️ ${ipRefreshCooldown}s` : ' Refresh'}
               </button>
             </div>
             {ipDetectionStatus === 'error' && (
-              <small className="error-text">Unable to detect IP address</small>
+              <small className="error-text">Unable to detect IP address. Please enter manually.</small>
+            )}
+            {ipDetectionStatus === 'success' && newTransaction.ipAddress && (
+              <small className="success-text">✓ IP detected: {newTransaction.ipAddress}</small>
             )}
           </div>
           
@@ -367,34 +463,38 @@ export default function Transactions() {
         ) : transactions.length === 0 ? (
           <p>No transactions found.</p>
         ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Amount</th>
-                <th>Merchant</th>
-                <th>Category</th>
-                <th>Status</th>
-                <th>Date</th>
-              </tr>
-            </thead>
-            <tbody>
-              {transactions.map((tx) => (
-                <tr key={tx.id}>
-                  <td className="mono">{tx.id.slice(0, 8)}...</td>
-                  <td>{tx.amount} {tx.currency}</td>
-                  <td>{tx.merchant || '-'}</td>
-                  <td>{tx.merchantCategory || '-'}</td>
-                  <td>
-                    <span className={`status-badge ${getStatusBadgeClass(tx.status)}`}>
-                      {tx.status}
-                    </span>
-                  </td>
-                  <td>{new Date(tx.timestamp).toLocaleString()}</td>
+          <div className="table-box">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Amount</th>
+                  <th>Merchant</th>
+                  <th>Category</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Date</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {transactions.map((tx) => (
+                  <tr key={tx.id}>
+                    <td className="mono">{tx.id?.slice(0, 8)}...</td>
+                    <td>{tx.amount} {tx.currency}</td>
+                    <td>{tx.merchant || '-'}</td>
+                    <td>{tx.merchantCategory || '-'}</td>
+                    <td>{tx.location || '-'}</td>
+                    <td>
+                      <span className={`status-badge ${getStatusBadgeClass(tx.status)}`}>
+                        {tx.status}
+                      </span>
+                    </td>
+                    <td>{new Date(tx.timestamp).toLocaleString()}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
     </div>

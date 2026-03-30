@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, List, Bell, BarChart2, Moon, Sun, Settings, LogOut } from 'lucide-react';
+import { LayoutDashboard, List, Bell, BarChart2, Moon, Sun, Settings, LogOut, User } from 'lucide-react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 export default function Sidebar({ toggleDarkMode, darkMode }) {
@@ -32,11 +32,6 @@ export default function Sidebar({ toggleDarkMode, darkMode }) {
         </div>
       </div>
 
-      <div className="user-info">
-        <div className="user-name">{user.fullName || 'User'}</div>
-        <div className="user-role">{user.role || 'USER'}</div>
-      </div>
-
       <div className="menu">
         {menu.map((item) => (
           <Link
@@ -51,13 +46,26 @@ export default function Sidebar({ toggleDarkMode, darkMode }) {
       </div>
 
       <div className="sidebar-footer">
-        <button className="footer-btn theme-toggle" onClick={toggleDarkMode}>
-          {darkMode ? <Sun size={18} /> : <Moon size={18} />}
-          {darkMode ? "Light Mode" : "Dark Mode"}
-        </button>
-        <button className="footer-btn" onClick={handleLogout}>
-          <LogOut size={18} /> Logout
-        </button>
+        <div className="user-info-bottom">
+          <div className="user-avatar">
+            <User size={16} />
+          </div>
+          <div className="user-details">
+            <div className="user-name">{user.fullName || 'User'}</div>
+            <div className="user-role">{user.role || 'USER'}</div>
+          </div>
+        </div>
+        
+        <div className="footer-actions">
+          <button className="footer-btn theme-toggle" onClick={toggleDarkMode}>
+            {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            <span>{darkMode ? "Light Mode" : "Dark Mode"}</span>
+          </button>
+          <button className="footer-btn" onClick={handleLogout}>
+            <LogOut size={18} /> 
+            <span>Logout</span>
+          </button>
+        </div>
       </div>
     </div>
   );

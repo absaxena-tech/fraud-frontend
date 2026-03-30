@@ -468,8 +468,8 @@ body.light-mode {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  max-height: 500px;
-  overflow-y: auto;
+  overflow: visible;
+  max-height: none;
 }
 
 .alert-item {
@@ -1123,6 +1123,7 @@ body.dark-mode .login-card {
 .text-center {
   text-align: center;
 }
+
 /* Button Group and Input Group Styles */
 .input-group {
   display: flex;
@@ -1264,4 +1265,1145 @@ body.dark-mode .login-card {
 
 .error-text {
   color: var(--danger);
+}
+
+/* ============================================ */
+/* FRAUD ALERT SPECIFIC STYLES - Live Kafka Feed */
+/* ============================================ */
+
+/* Balanced Live Kafka Feed */
+.live-kafka-feed {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 13px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+/* Header */
+.feed-header {
+  padding: 0.75rem 1rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.feed-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.feed-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--primary-light);
+}
+
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: rgba(239, 68, 68, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #ef4444;
+}
+
+.live-badge-dot {
+  width: 6px;
+  height: 6px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: pulse 1.5s infinite;
+}
+
+/* Feed List */
+.feed-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.feed-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.feed-list::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+  border-radius: 3px;
+}
+
+.feed-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.feed-list::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* Kafka Card - Fraud Alert Card */
+.kafka-card {
+  position: relative;
+  border-left: 3px solid;
+  border-radius: 8px;
+  padding: 0.75rem;
+  transition: all 0.2s ease;
+  animation: slideIn 0.2s ease-out;
+  background: var(--bg-card);
+  cursor: pointer;
+}
+
+.kafka-card:hover {
+  transform: translateX(2px);
+  box-shadow: var(--shadow);
+}
+
+.kafka-card-new {
+  animation: slideInGlow 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInGlow {
+  0% {
+    opacity: 0;
+    transform: translateX(-10px);
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.3);
+  }
+}
+
+/* Live Indicator for New Fraud Alerts */
+.live-indicator {
+  position: absolute;
+  top: -6px;
+  right: 8px;
+  background: var(--primary);
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  color: white;
+  animation: bounceIn 0.3s ease-out;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.kafka-card-header {
+  margin-bottom: 0.5rem;
+}
+
+.kafka-card-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.kafka-card-time {
+  font-size: 0.65rem;
+  font-family: monospace;
+  color: var(--text-secondary);
+}
+
+.kafka-card-data {
+  margin-top: 0.25rem;
+}
+
+.kafka-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.5rem;
+}
+
+.meta-item {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+}
+
+.meta-label {
+  font-weight: 500;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  font-size: 0.65rem;
+}
+
+.meta-value {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.meta-value-mono {
+  font-family: monospace;
+  font-size: 0.7rem;
+}
+
+/* Status Dot for Connection */
+.status-dot-container {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.status-dot-pulse {
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.status-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+/* Empty State for No Alerts */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 300px;
+  gap: 0.75rem;
+}
+
+.empty-state-icon {
+  font-size: 2rem;
+  opacity: 0.5;
+  animation: float 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.empty-state-text {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.empty-state-subtext {
+  color: var(--text-secondary);
+  opacity: 0.7;
+  font-size: 0.7rem;
+}
+
+/* Live Counter for Alert Count */
+.live-counter {
+  background: var(--primary);
+  color: white;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.live-counter-pulse {
+  animation: counterPulse 0.3s ease-out;
+}
+
+@keyframes counterPulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Footer Controls */
+.feed-footer {
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.auto-scroll-btn {
+  background: var(--hover-bg);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.auto-scroll-btn:hover {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.auto-scroll-btn.active {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+
+.new-badge {
+  background: var(--primary);
+  color: white;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  animation: slideInRight 0.2s ease-out;
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.feed-footer-error {
+  padding: 0.5rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-top: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  font-size: 0.7rem;
+  text-align: center;
+}
+
+/* Fraud Score Indicator */
+.fraud-score-high {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.fraud-score-medium {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+.fraud-score-low {
+  color: var(--success);
+}
+
+/* Amount Highlight for Large Transactions */
+.amount-high {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.amount-medium {
+  color: var(--warning);
+  font-weight: 600;
+}
+
+/* Responsive Adjustments for Fraud Alert Feed */
+@media (max-width: 768px) {
+  .kafka-details-grid {
+    grid-template-columns: 1fr;
+    gap: 0.375rem;
+  }
+  
+  .meta-item {
+    justify-content: space-between;
+  }
+  
+  .feed-header {
+    padding: 0.5rem;
+  }
+  
+  .feed-title {
+    font-size: 0.8rem;
+  }
+}
+
+/* Animation for New Fraud Alert */
+@keyframes alertFlash {
+  0% {
+    background-color: transparent;
+  }
+  50% {
+    background-color: rgba(239, 68, 68, 0.1);
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.kafka-card-high-risk {
+  animation: alertFlash 1s ease-in-out;
+}
+
+/* Tooltip Styles for Fraud Details */
+.fraud-tooltip {
+  position: fixed;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: monospace;
+  z-index: 1000;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  pointer-events: none;
+  max-width: 300px;
+  word-wrap: break-word;
+  white-space: normal;
+}
+
+/* Severity Color Classes */
+.severity-high {
+  border-left-color: var(--danger);
+}
+
+.severity-medium {
+  border-left-color: var(--warning);
+}
+
+.severity-low {
+  border-left-color: #f97316;
+}
+
+.severity-info {
+  border-left-color: var(--info);
+}
+/* Add these styles to your existing CSS file */
+
+/* Sidebar Footer - Updated */
+.sidebar-footer {
+  padding: 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* User Info at Bottom */
+.user-info-bottom {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--hover-bg);
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.user-avatar {
+  width: 32px;
+  height: 32px;
+  background: var(--primary);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.user-details {
+  flex: 1;
+}
+
+.user-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.user-role {
+  font-size: 11px;
+  color: var(--primary-light);
+  font-weight: 500;
+}
+
+/* Footer Actions */
+.footer-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footer-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s;
+  font-size: 14px;
+  font-weight: 500;
+  width: 100%;
+}
+
+.footer-btn:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.footer-btn span {
+  flex: 1;
+  text-align: left;
+}
+
+/* Remove old user-info styles */
+.user-info {
+  display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .user-info-bottom {
+    padding: 8px;
+    justify-content: center;
+  }
+  
+  .user-details {
+    display: none;
+  }
+  
+  .user-avatar {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .footer-btn span {
+    display: none;
+  }
+  
+  .footer-btn {
+    justify-content: center;
+    padding: 10px;
+  }
+}
+/* AuthPages.css */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.auth-page {
+  min-height: 100vh;
+  width: 100%;
+  background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 50%, #0f1329 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  padding: 20px;
+}
+
+.auth-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  max-width: 1280px;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(10px);
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Left Panel - Brand/Info Side */
+.auth-info-panel {
+  background: linear-gradient(145deg, rgba(30, 35, 70, 0.9) 0%, rgba(20, 25, 55, 0.95) 100%);
+  padding: 48px 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-content {
+  color: white;
+}
+
+.brand-icon {
+  font-size: 56px;
+  margin-bottom: 24px;
+  filter: drop-shadow(0 0 20px rgba(79, 114, 255, 0.4));
+}
+
+.auth-info-panel h1 {
+  font-size: 36px;
+  font-weight: 700;
+  background: linear-gradient(135deg, #fff, #a0a8ff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  margin-bottom: 12px;
+}
+
+.tagline {
+  font-size: 16px;
+  color: #a0a8c0;
+  margin-bottom: 32px;
+  letter-spacing: 0.5px;
+}
+
+.security-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 48px;
+}
+
+.security-badges span {
+  background: rgba(79, 114, 255, 0.15);
+  padding: 6px 14px;
+  border-radius: 40px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #c4cdff;
+  backdrop-filter: blur(4px);
+}
+
+.stats {
+  display: flex;
+  gap: 32px;
+  margin-top: 32px;
+  padding-top: 32px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-number {
+  font-size: 28px;
+  font-weight: 800;
+  color: #4f72ff;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #8a92b0;
+  margin-top: 4px;
+}
+
+/* Right Panel - Form Side */
+.auth-form-panel {
+  background: rgba(15, 20, 40, 0.8);
+  backdrop-filter: blur(20px);
+  padding: 48px 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-container {
+  width: 100%;
+  max-width: 400px;
+}
+
+.form-header {
+  margin-bottom: 32px;
+}
+
+.form-header h2 {
+  font-size: 28px;
+  font-weight: 700;
+  color: white;
+  margin-bottom: 8px;
+}
+
+.form-header p {
+  color: #8a92b0;
+  font-size: 14px;
+}
+
+.form-group {
+  margin-bottom: 24px;
+}
+
+.form-group label {
+  display: block;
+  color: #e0e4ff;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.input-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.input-icon .icon {
+  position: absolute;
+  left: 14px;
+  font-size: 16px;
+  color: #6a72a0;
+}
+
+.input-icon input {
+  width: 100%;
+  padding: 14px 14px 14px 44px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 16px;
+  font-size: 14px;
+  color: white;
+  transition: all 0.2s ease;
+}
+
+.input-icon input:focus {
+  outline: none;
+  border-color: #4f72ff;
+  background: rgba(79, 114, 255, 0.1);
+  box-shadow: 0 0 0 3px rgba(79, 114, 255, 0.2);
+}
+
+.input-icon input::placeholder {
+  color: #5a6288;
+}
+
+/* Password strength */
+.password-strength {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.strength-bar {
+  height: 4px;
+  border-radius: 4px;
+  transition: width 0.2s ease;
+  max-width: 100px;
+}
+
+.strength-text {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.hint {
+  font-size: 11px;
+  color: #5a6288;
+  margin-top: 6px;
+}
+
+/* Form options */
+.form-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #a0a8c0;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #4f72ff;
+}
+
+.forgot-link {
+  color: #4f72ff;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+/* Buttons */
+.btn-primary {
+  width: 100%;
+  padding: 14px;
+  background: linear-gradient(135deg, #4f72ff 0%, #3a55d0 100%);
+  border: none;
+  border-radius: 40px;
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(79, 114, 255, 0.4);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-google {
+  width: 100%;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 40px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.btn-google:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-google span {
+  font-weight: 700;
+  background: white;
+  color: #3a55d0;
+  width: 20px;
+  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+}
+
+/* Divider */
+.divider {
+  text-align: center;
+  color: #5a6288;
+  font-size: 12px;
+  margin: 24px 0;
+  position: relative;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: calc(50% - 30px);
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.divider::before {
+  left: 0;
+}
+
+.divider::after {
+  right: 0;
+}
+
+/* Auth switch link */
+.auth-switch {
+  text-align: center;
+  margin-top: 24px;
+  color: #8a92b0;
+  font-size: 13px;
+}
+
+.auth-switch a {
+  color: #4f72ff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.auth-switch a:hover {
+  text-decoration: underline;
+}
+
+/* Error message */
+.error-message {
+  background: rgba(255, 68, 68, 0.15);
+  border-left: 3px solid #ff4444;
+  padding: 12px 16px;
+  border-radius: 12px;
+  color: #ff8888;
+  font-size: 13px;
+  margin-bottom: 24px;
+}
+
+/* Feature list for register page */
+.feature-list {
+  margin: 32px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.feature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #c4cdff;
+  font-size: 14px;
+}
+
+.feature span {
+  background: rgba(79, 114, 255, 0.2);
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: bold;
+  color: #4f72ff;
+}
+
+.trust-badge {
+  margin-top: 32px;
+  padding: 12px 16px;
+  background: rgba(79, 114, 255, 0.1);
+  border-radius: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #a0a8ff;
+}
+
+.terms {
+  text-align: center;
+  font-size: 11px;
+  color: #5a6288;
+  margin-top: 24px;
+}
+
+.terms a {
+  color: #7a82b0;
+  text-decoration: none;
+}
+
+.terms a:hover {
+  text-decoration: underline;
+}
+
+/* Responsive */
+@media (max-width: 900px) {
+  .auth-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .auth-info-panel {
+    display: none;
+  }
+  
+  .auth-form-panel {
+    padding: 40px 24px;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-form-panel {
+    padding: 32px 20px;
+  }
+  
+  .form-header h2 {
+    font-size: 24px;
+  }
+}
+.analytics-page {
+  min-height: 100vh;
+  padding: 28px;
+  background: radial-gradient(circle at top left, #0f172a, #070b14);
+  color: #e5e7eb;
+  font-family: "Inter", sans-serif;
+}
+
+.analytics-title {
+  font-size: 42px;
+  font-weight: 800;
+  margin: 0;
+  color: #f8fafc;
+}
+
+.analytics-subtitle {
+  margin-top: 6px;
+  font-size: 15px;
+  color: rgba(226, 232, 240, 0.7);
+}
+
+.error-text {
+  color: #f87171;
+  font-weight: 600;
+}
+
+/* Grid like screenshot */
+.analytics-grid {
+  margin-top: 22px;
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 20px;
+}
+
+.analytics-card {
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.04),
+    0px 12px 40px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(10px);
+  min-height: 300px;
+}
+
+.card-title {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: rgba(248, 250, 252, 0.92);
+}
+
+/* Placeholder for pie charts */
+.chart-placeholder {
+  width: 100%;
+  height: 240px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 14px;
+  border: 1px dashed rgba(148, 163, 184, 0.3);
+  background: rgba(2, 6, 23, 0.45);
+  color: rgba(226, 232, 240, 0.6);
+  font-size: 14px;
+}
+
+/* Metrics list like screenshot */
+.metrics-list {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 10px;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+  font-size: 15px;
+  color: rgba(226, 232, 240, 0.75);
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric-value {
+  font-weight: 800;
+  font-size: 18px;
+  color: rgba(248, 250, 252, 0.95);
+}
+
+.metric-value.success {
+  color: #22c55e;
+}
+
+.metric-value.warning {
+  color: #facc15;
+}
+
+.metric-value.danger {
+  color: #ef4444;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-title {
+    font-size: 34px;
+  }
 }
