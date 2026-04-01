@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -34,12 +34,14 @@ function severityColor(severity) {
 }
 
 function getPayload(message) {
-  return message?.data?.value || message?.value || {};
+  if (message?.data && typeof message.data === "object") return message.data;
+  if (message?.value && typeof message.value === "object") return message.value;
+  return {};
 }
 
 function formatMoney(amount) {
   if (amount === null || amount === undefined) return "—";
-  return `$${Number(amount).toLocaleString()}`;
+  return `${Number(amount).toLocaleString()}`;
 }
 
 function formatScore(score) {
@@ -47,46 +49,48 @@ function formatScore(score) {
   return Number(score).toFixed(2);
 }
 
+// Map Kafka status to our UI-friendly keys
 function getKafkaStatus(message) {
-  const rawStatus =
-    message?.data?.value?.status ??
-    message?.value?.status ??
-    message?.status ??
-    null;
+  const payload = getPayload(message);
+  const rawStatus = payload?.status ?? message?.status ?? null;
 
-  if (rawStatus === null) return null;
+  if (!rawStatus) return "OK";
 
   const s = String(rawStatus).toUpperCase();
+  if (s === "FLAGGED") return "FLAGGED";
+  if (s === "BLOCKED") return "BLOCKED";
+  if (s === "SUCCESS") return "OK";
+  return "OK";
+}
 
-  if (s === "FLAGGED") return "flagged";
-  if (s === "BLOCKED") return "blocked";
-
-  return null;
+function getTransactionId(message) {
+  return (
+    message?.data?.transactionId ??
+    message?.data?.id ??
+    message?.messageId ??
+    null
+  );
 }
 
 // ── UI Components ──────────────────────────────────────────────────────────
 
 function StatusDot({ status }) {
   const colors = {
-    // live: { dot: "#22c55e", label: "LIVE" },
+    OK: { dot: "#22c55e", label: "OK" },
+    FLAGGED: { dot: "#f97316", label: "FLAG" },
+    BLOCKED: { dot: "#ef4444", label: "BLOCK" },
     connecting: { dot: "#eab308", label: "CONN" },
     error: { dot: "#ef4444", label: "ERR" },
-    null: { dot: "#22c55e", label: "OK" },
-    flagged: { dot: "#f97316", label: "FLAG" },
-    blocked: { dot: "#ef4444", label: "BLOCK" },
   };
 
-  let statusKey = status;
-  if (status === null) statusKey = "null";
-  if (status === "flagged") statusKey = "flagged";
-  if (status === "blocked") statusKey = "blocked";
-
-  const c = colors[statusKey] || colors.connecting;
+  const c = colors[status] || colors.connecting;
 
   return (
     <span className="status-dot-container">
       <span
-        className={`status-dot ${status === "live" || status === "connecting" ? "status-dot-pulse" : ""}`}
+        className={`status-dot ${
+          status === "live" || status === "connecting" ? "status-dot-pulse" : ""
+        }`}
         style={{ background: c.dot }}
       />
       <span className="status-label" style={{ color: c.dot }}>
@@ -154,7 +158,7 @@ function Tooltip({ children, tooltipText }) {
 }
 
 function MetaItem({ label, value, fullValue, mono }) {
-  if (!value) return null;
+  if (!value && value !== 0) return null;
   const tooltipText = fullValue !== undefined ? fullValue : value;
 
   return (
@@ -172,9 +176,12 @@ function MetaItem({ label, value, fullValue, mono }) {
 function KafkaCard({ message, isNew }) {
   const severity = message.severity || null;
   const colors = severity !== null ? severityColor(severity) : severityColor("INFO");
+
   const cardStatus = getKafkaStatus(message);
   const payload = getPayload(message);
   const timestamp = message.timestamp || message.detectedAt || Date.now();
+
+  const txId = getTransactionId(message);
 
   return (
     <div
@@ -184,12 +191,26 @@ function KafkaCard({ message, isNew }) {
         borderLeftColor: colors.bar,
       }}
     >
-      {/* {isNew && <div className="live-indicator">● NEW</div>} */}
-      
       <div className="kafka-card-header">
         <div className="kafka-card-left">
           <StatusDot status={cardStatus} />
           <span className="kafka-card-time">{formatTimestamp(timestamp)}</span>
+
+          {message.topic && (
+            <span
+              className="kafka-topic-badge"
+              style={{
+                background: colors.bar,
+                color: "white",
+                padding: "2px 6px",
+                borderRadius: "4px",
+                fontSize: "10px",
+                marginLeft: "8px",
+              }}
+            >
+              {message.topic}
+            </span>
+          )}
         </div>
       </div>
 
@@ -197,26 +218,31 @@ function KafkaCard({ message, isNew }) {
         {!payload || typeof payload !== "object" ? (
           <pre className="kafka-card-data-preview">{String(message.value || "—")}</pre>
         ) : (
-          <div className="kafka-details-grid">
-            {payload.transactionId && (
-              <MetaItem
-                label="TX ID"
-                value={shortId(payload.transactionId)}
-                fullValue={payload.transactionId}
-                mono
-              />
+          <>
+            <div className="kafka-details-grid">
+              {txId && <MetaItem label="TX ID" value={shortId(txId)} fullValue={txId} mono />}
+              {payload.accountId && <MetaItem label="Account" value={shortId(payload.accountId)} fullValue={payload.accountId} mono />}
+              {payload.userEmail && <MetaItem label="Email" value={payload.userEmail.split("@")[0]} fullValue={payload.userEmail} />}
+              {payload.amount !== undefined && <MetaItem label="Amount" value={formatMoney(payload.amount)} />}
+              {payload.currency && <MetaItem label="Currency" value={payload.currency} />}
+              {payload.fraudScore !== undefined && <MetaItem label="Fraud Score" value={formatScore(payload.fraudScore)} />}
+              {payload.ruleTriggered && <MetaItem label="Rule" value={payload.ruleTriggered} />}
+              {payload.merchant && <MetaItem label="Merchant" value={payload.merchant} />}
+              {payload.merchantCategory && <MetaItem label="Category" value={payload.merchantCategory} />}
+              {payload.location && <MetaItem label="Location" value={payload.location} />}
+              {payload.ipAddress && <MetaItem label="IP" value={payload.ipAddress} mono />}
+              {payload.deviceId && <MetaItem label="Device" value={shortId(payload.deviceId)} fullValue={payload.deviceId} mono />}
+              <MetaItem label="Status" value={cardStatus} />
+              {payload.timestamp && <MetaItem label="Detected" value={formatTimestamp(payload.timestamp)} fullValue={payload.timestamp} />}
+            </div>
+
+            {payload.explanation && (
+              <div style={{ marginTop: "12px", padding: "10px 12px", borderRadius: "10px", background: "rgba(0,0,0,0.20)", border: "1px solid rgba(255,255,255,0.08)" }}>
+                <div style={{ fontSize: "11px", fontWeight: 700, color: "#cbd5e1", marginBottom: "6px", letterSpacing: "0.04em", textTransform: "uppercase" }}>Explanation</div>
+                <div style={{ fontSize: "13px", lineHeight: 1.5, color: "#f8fafc", whiteSpace: "pre-wrap" }}>{payload.explanation}</div>
+              </div>
             )}
-            {payload.userEmail && (
-              <MetaItem label="Email" value={payload.userEmail.split('@')[0]} fullValue={payload.userEmail} />
-            )}
-            {payload.amount !== undefined && (
-              <MetaItem label="Amount" value={formatMoney(payload.amount)} />
-            )}
-            {payload.fraudScore !== undefined && (
-              <MetaItem label="Score" value={formatScore(payload.fraudScore)} />
-            )}
-            <MetaItem label="Status" value={payload.status ?? "SUCCESS"} />
-          </div>
+          </>
         )}
       </div>
     </div>
@@ -245,11 +271,7 @@ function LiveCounter({ count }) {
     setPrevCount(count);
   }, [count]);
 
-  return (
-    <span className={`live-counter ${isAnimating ? "live-counter-pulse" : ""}`}>
-      {count}
-    </span>
-  );
+  return <span className={`live-counter ${isAnimating ? "live-counter-pulse" : ""}`}>{count}</span>;
 }
 
 // ── Main Component ───────────────────────────────────────────────────────────
@@ -259,68 +281,76 @@ export default function LiveKafkaFeed({ messages = [], status = "connecting" }) 
   const feedEndRef = useRef(null);
   const [autoScroll, setAutoScroll] = useState(true);
 
-  const newCount = messages.length > prevLengthRef.current
-    ? messages.length - prevLengthRef.current
-    : 0;
+  const statusPriority = { BLOCKED: 3, FLAGGED: 2, OK: 1 };
+
+  const deduplicatedMessages = useMemo(() => {
+    const map = new Map();
+
+    for (const msg of messages) {
+      const txId = getTransactionId(msg) || msg.key || msg.messageId;
+      if (!txId) continue;
+
+      const existing = map.get(txId);
+
+      const msgStatus = getKafkaStatus(msg);
+      const existingStatus = existing ? getKafkaStatus(existing) : "OK";
+
+      if (!existing || statusPriority[msgStatus] >= statusPriority[existingStatus]) {
+        map.set(txId, msg);
+      }
+    }
+
+    return Array.from(map.values()).sort((a, b) => {
+      const ta = new Date(a.timestamp || a.detectedAt || 0).getTime();
+      const tb = new Date(b.timestamp || b.detectedAt || 0).getTime();
+      return ta - tb;
+    });
+  }, [messages]);
+
+  const newCount =
+    deduplicatedMessages.length > prevLengthRef.current
+      ? deduplicatedMessages.length - prevLengthRef.current
+      : 0;
 
   useEffect(() => {
-    prevLengthRef.current = messages.length;
-  }, [messages.length]);
+    prevLengthRef.current = deduplicatedMessages.length;
+  }, [deduplicatedMessages.length]);
 
   useEffect(() => {
     if (autoScroll && feedEndRef.current) {
       feedEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
-  }, [messages, autoScroll]);
+  }, [deduplicatedMessages, autoScroll]);
 
   return (
     <div className="live-kafka-feed">
       <div className="feed-header">
         <div className="feed-header-left">
           <span className="feed-title">📡 Kafka Live Feed</span>
-          {messages.length > 0 && <LiveCounter count={messages.length} />}
+          {deduplicatedMessages.length > 0 && <LiveCounter count={deduplicatedMessages.length} />}
           <div className="live-badge">
             <span className="live-badge-dot" />
             <span>LIVE</span>
           </div>
         </div>
+
         <StatusDot status={status} />
       </div>
 
       <div className="feed-list">
-        {messages.length === 0 ? (
+        {deduplicatedMessages.length === 0 ? (
           <EmptyState />
         ) : (
           <>
-            {messages.map((message, idx) => (
-              <KafkaCard
-                key={message.messageId || `kafka-${idx}`}
-                message={message}
-                isNew={idx < newCount}
-              />
+            {deduplicatedMessages.map((message, idx) => (
+              <KafkaCard key={getTransactionId(message) || `${message.topic}-${idx}`} message={message} isNew={idx >= deduplicatedMessages.length - newCount} />
             ))}
             <div ref={feedEndRef} />
           </>
         )}
       </div>
 
-      {/* {messages.length > 0 && (
-        <div className="feed-footer">
-          <button
-            className={`auto-scroll-btn ${autoScroll ? "active" : ""}`}
-            onClick={() => setAutoScroll(!autoScroll)}
-          >
-            {autoScroll ? "📌 Auto-scroll" : "🔽 Manual scroll"}
-          </button>
-          {newCount > 0 && !autoScroll && (
-            <div className="new-badge">↓ {newCount} new message{newCount !== 1 ? "s" : ""}</div>
-          )}
-        </div>
-      )} */}
-
-      {status === "error" && (
-        <div className="feed-footer-error">⚠ Connection lost — reconnecting...</div>
-      )}
+      {status === "error" && <div className="feed-footer-error">⚠ Connection lost — reconnecting...</div>}
     </div>
   );
 }
