@@ -74,82 +74,26 @@ export default function Alerts() {
   };
 
   async function getExplanation(alert) {
-    try {
-      setSelectedAlert(alert);
-      setExplaining(true);
-      setExplanation('');
-      setExplanationError(null);
-      
-      // Prepare the transaction data from actual backend structure
-      const transactionData = {
-        id: alert.transactionId,
-        amount: extractAmountFromExplanation(alert.explanation) || 0,
-        currency: 'USD',
-        timestamp: alert.createdAt || new Date().toISOString()
-      };
-      
-      // Prepare the rule explanation from actual backend data
-      let ruleExplanation = alert.explanation || '';
-      
-      // Generate a better fallback explanation if not provided
-      if (!ruleExplanation) {
-        ruleExplanation = generateRuleBasedExplanation(alert);
-      }
-      
-      console.log('Sending to RAG API:', { transactionData, ruleExplanation });
-      
-      // Call the RAG API with both transaction data and rule explanation
-      const response = await ragAPI.explain(transactionData, ruleExplanation);
-      console.log('RAG API response:', response);
-      
-      if (response.data && response.data.explanation) {
-        setExplanation(response.data.explanation);
-      } else if (response.data && response.data.message) {
-        setExplanation(response.data.message);
-      } else {
-        setExplanation(ruleExplanation || 'No detailed explanation available.');
-      }
-    } catch (err) {
-      console.error('Failed to get explanation:', err);
-      console.error('Error details:', err.response);
-      
-      let errorMessage = 'Unable to fetch AI explanation. ';
-      
-      if (err.response) {
-        console.error('Response data:', err.response.data);
-        console.error('Response status:', err.response.status);
-        console.error('Response headers:', err.response.headers);
-        
-        errorMessage += `Server returned ${err.response.status}: `;
-        if (err.response.data && err.response.data.message) {
-          errorMessage += err.response.data.message;
-        } else if (err.response.data && err.response.data.error) {
-          errorMessage += err.response.data.error;
-        } else if (err.response.status === 500) {
-          errorMessage += 'Internal server error. The RAG service may be unavailable.';
-        } else if (err.response.status === 400) {
-          errorMessage += 'Invalid request format. Please try again.';
-        } else {
-          errorMessage += 'Unknown error occurred.';
-        }
-        
-        // Generate a fallback explanation since the API failed
-        const fallbackExplanation = generateFallbackExplanation(alert);
-        setExplanation(fallbackExplanation);
-        setExplanationError(`${errorMessage} Showing basic explanation instead.`);
-      } else if (err.request) {
-        errorMessage += 'No response from server. The RAG service might be down.';
-        setExplanation(generateFallbackExplanation(alert));
-        setExplanationError(`${errorMessage} Showing basic explanation instead.`);
-      } else {
-        errorMessage += err.message;
-        setExplanation(generateFallbackExplanation(alert));
-        setExplanationError(`${errorMessage} Showing basic explanation instead.`);
-      }
-    } finally {
-      setExplaining(false);
-    }
-  }
+    try {
+      setSelectedAlert(alert);
+      setExplaining(true);
+      setExplanation('');
+      setExplanationError(null);
+      console.log('Setting explanation for alert:', alert);
+
+      // Directly use the alert's explanation or a fallback
+      let explanation = alert.explanation || generateFallbackExplanation(alert);
+
+      setExplanation(explanation);
+    } catch (err) {
+      console.error('Failed to set explanation:', err);
+      const fallback = generateFallbackExplanation(alert);
+      setExplanation(fallback);
+      setExplanationError('Unable to fetch AI explanation. Showing basic explanation instead.');
+    } finally {
+      setExplaining(false);
+    }
+  }
   
   // Helper function to extract amount from explanation
   function extractAmountFromExplanation(explanation) {

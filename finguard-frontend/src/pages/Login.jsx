@@ -1,7 +1,8 @@
 // Login.jsx
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { authAPI } from '../api/api';
+import { Eye } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,6 +12,21 @@ export default function Login() {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    const savedEmail = localStorage.getItem('rememberMeEmail');
+    const savedPassword = localStorage.getItem('rememberMePassword');
+    
+    if (savedEmail && savedPassword) {
+      setFormData(prev => ({ ...prev, email: savedEmail, password: savedPassword }));
+      setRememberMe(true);
+    } else if (savedEmail) {
+      setFormData(prev => ({ ...prev, email: savedEmail }));
+      setRememberMe(true);
+    }
+  }, []);
 
   const handleChange = (e) => {
     setFormData({
@@ -32,6 +48,14 @@ export default function Login() {
       localStorage.setItem('refreshToken', refreshToken);
       localStorage.setItem('user', JSON.stringify(user));
       
+      if (rememberMe) {
+        localStorage.setItem('rememberMeEmail', formData.email);
+        localStorage.setItem('rememberMePassword', formData.password);
+      } else {
+        localStorage.removeItem('rememberMeEmail');
+        localStorage.removeItem('rememberMePassword');
+      }
+
       navigate('/');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed');
@@ -94,24 +118,50 @@ export default function Login() {
 
               <div className="form-group">
                 <label>Password</label>
-                <div className="input-icon">
+                <div className="input-icon" style={{ position: 'relative' }}>
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     name="password"
                     value={formData.password}
                     onChange={handleChange}
                     required
                     placeholder="Enter your password"
+                    style={{ paddingRight: '40px' }}
                   />
+                  <button
+                    type="button"
+                    onMouseEnter={() => setShowPassword(true)}
+                    onMouseLeave={() => setShowPassword(false)}
+                    onTouchStart={() => setShowPassword(true)}
+                    onTouchEnd={() => setShowPassword(false)}
+                    style={{
+                      position: 'absolute',
+                      right: '10px',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      color: 'var(--text-secondary)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      padding: '4px'
+                    }}
+                  >
+                    <Eye size={18} />
+                  </button>
                 </div>
               </div>
 
-              <div className="form-options">
+              {/* <div className="form-options">
                 <label className="checkbox-label">
-                  <input type="checkbox" /> Remember me
+                  <input 
+                    type="checkbox" 
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  /> Remember me
                 </label>
-                <a href="/forgot-password" className="forgot-link">Forgot Password?</a>
-              </div>
+              </div> */}
 
               <button type="submit" className="btn-primary" disabled={loading}>
                 {loading ? 'Authenticating...' : 'Sign In'}
@@ -119,7 +169,7 @@ export default function Login() {
             </form>
 
             <p className="auth-switch">
-              Don't have an account? <a href="/register">Create Account</a>
+              Don't have an account? <Link to="/register">Create Account</Link>
             </p>
 
             <div className="divider">or</div>

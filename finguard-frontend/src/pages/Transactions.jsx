@@ -821,7 +821,7 @@ export default function Transactions() {
                   opacity: ipRefreshCooldown > 0 ? 0.6 : 1,
                 }}
               >
-                {ipRefreshCooldown > 0 ? `⏱️ ${ipRefreshCooldown}s` : "Refresh"}
+                {ipRefreshCooldown > 0 ? `${ipRefreshCooldown}s` : "Refresh"}
               </button>
             </div>
           </div>
@@ -847,7 +847,7 @@ export default function Transactions() {
         </form>
       </div>
 
-      {/* HISTORY */}
+ 
       <div
         className="card"
         style={{
