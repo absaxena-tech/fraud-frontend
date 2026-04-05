@@ -40,19 +40,20 @@ export default function Transactions() {
   ];
 
   const categories = [
-    { value: "", label: "Select category", icon: "", color: "#6c757d" },
-    { value: "RETAIL", label: "Retail", icon: "", color: "#4c9aff" },
-    { value: "GROCERY", label: "Grocery", icon: "", color: "#52c41a" },
-    { value: "RESTAURANT", label: "Restaurant", icon: "", color: "#fa8c16" },
-    { value: "ENTERTAINMENT", label: "Entertainment", icon: "", color: "#eb2f96" },
-    { value: "TRAVEL", label: "Travel", icon: "", color: "#13c2c2" },
-    { value: "CRYPTO", label: "Crypto", icon: "", color: "#f5222d" },
-    { value: "GAMBLING", label: "Gambling", icon: "", color: "#fa541c" },
-    { value: "HEALTHCARE", label: "Healthcare", icon: "", color: "#2f9e44" },
-    { value: "EDUCATION", label: "Education", icon: "", color: "#7048e8" },
-    { value: "UTILITIES", label: "Utilities", icon: "", color: "#f76707" },
-    { value: "SUBSCRIPTION", label: "Subscription", icon: "", color: "#5f3dc6" },
-  ];
+  { value: "", label: "Select category", icon: "", color: "#6c757d" },
+  { value: "RETAIL", label: "Retail", icon: "", color: "#4c9aff" },
+  { value: "ECOMMERCE", label: "E-Commerce", icon: "", color: "#3b82f6" },
+  { value: "GROCERY", label: "Grocery", icon: "", color: "#52c41a" },
+  { value: "RESTAURANT", label: "Restaurant", icon: "", color: "#fa8c16" },
+  { value: "ENTERTAINMENT", label: "Entertainment", icon: "", color: "#eb2f96" },
+  { value: "TRAVEL", label: "Travel", icon: "", color: "#13c2c2" },
+  { value: "CRYPTO", label: "Crypto", icon: "", color: "#f5222d" },
+  { value: "GAMBLING", label: "Gambling", icon: "", color: "#fa541c" },
+  { value: "HEALTHCARE", label: "Healthcare", icon: "", color: "#2f9e44" },
+  { value: "EDUCATION", label: "Education", icon: "", color: "#7048e8" },
+  { value: "UTILITIES", label: "Utilities", icon: "", color: "#f76707" },
+  { value: "SUBSCRIPTION", label: "Subscription", icon: "", color: "#5f3dc6" },
+];
 
   const IP_SERVICES = [
     { url: "https://api.ipify.org?format=json", parser: (data) => data.ip },
